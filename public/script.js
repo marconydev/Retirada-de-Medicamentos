@@ -2,8 +2,9 @@
 // SCRIPT PRINCIPAL - Retirada de Medicamentos
 // ===============================================
 
-// URL base da API (relativa para funcionar local e no Render)
-const API_URL = "/api/pacientes";
+// URL base da API - DOMÍNIO DO RENDER
+const API_URL = "https://retirada-de-medicamentos.onrender.com/api/pacientes";
+
 
 // Elementos do DOM
 const loginSection = document.getElementById("loginSection");

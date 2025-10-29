@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Retirada de Medicamentos</title>
   <link rel="stylesheet" href="style.css"/>
+  
+  <!-- SDK do Google para Login -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -13,15 +15,20 @@
     <button id="logoutBtn" class="hidden">Sair</button>
   </header>
 
-  <!-- TELA DE LOGIN -->
+  <!-- ========================= -->
+  <!-- SEÇÃO DE LOGIN (INICIAL) -->
+  <!-- ========================= -->
   <main id="loginSection">
     <div class="login-box">
       <h2>Entrar com o Google</h2>
+      <!-- Aqui o Google renderiza o botão -->
       <div id="googleLogin"></div>
     </div>
   </main>
 
-  <!-- APLICAÇÃO PRINCIPAL -->
+  <!-- ========================= -->
+  <!-- SEÇÃO PRINCIPAL (APÓS LOGIN) -->
+  <!-- ========================= -->
   <main id="appSection" class="hidden">
     <section class="painel-acoes">
       <h2>Bem-vindo, <span id="nomeUsuario"></span></h2>
@@ -32,7 +39,7 @@
       </div>
     </section>
 
-    <!-- Indicadores -->
+    <!-- Painel de Indicadores -->
     <section class="painel-indicadores">
       <div class="card">
         <h3>Total de Pacientes</h3>
@@ -64,7 +71,9 @@
     </section>
   </main>
 
-  <!-- MODAL: Cadastrar Paciente -->
+  <!-- ========================= -->
+  <!-- MODAL: CADASTRAR PACIENTE -->
+  <!-- ========================= -->
   <div id="modalCadastro" class="modal hidden" aria-hidden="true">
     <div class="modal-content">
       <button class="modal-close" id="fecharCadastro" aria-label="Fechar">×</button>
@@ -77,8 +86,7 @@
         <input type="text" id="cadCpf" placeholder="Ex.: 000.000.000-00" required />
 
         <label class="inline">
-           É do Hospital?
-           <input type="checkbox" id="cadHospital" />
+          <input type="checkbox" id="cadHospital" /> É do Hospital?
         </label>
 
         <label>Setor</label>
@@ -89,7 +97,9 @@
     </div>
   </div>
 
-  <!-- MODAL: Saída de Medicamento -->
+  <!-- ========================= -->
+  <!-- MODAL: SAÍDA DE MEDICAMENTO -->
+  <!-- ========================= -->
   <div id="modalSaida" class="modal hidden" aria-hidden="true">
     <div class="modal-content">
       <button class="modal-close" id="fecharSaida" aria-label="Fechar">×</button>
@@ -114,7 +124,9 @@
     </div>
   </div>
 
-  <!-- MODAL: Histórico de Retiradas -->
+  <!-- ========================= -->
+  <!-- MODAL: HISTÓRICO DE RETIRADAS -->
+  <!-- ========================= -->
   <div id="modalHistorico" class="modal hidden" aria-hidden="true">
     <div class="modal-content">
       <button class="modal-close" id="fecharHistorico" aria-label="Fechar">×</button>
@@ -135,9 +147,10 @@
     </div>
   </div>
 
-  <!-- Toast -->
+  <!-- TOAST DE MENSAGENS -->
   <div id="torrada" class="hidden"></div>
 
+  <!-- Script principal -->
   <script src="script.js"></script>
 </body>
 </html>

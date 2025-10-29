@@ -1,7 +1,6 @@
 // ===========================================
-// SERVER.JS - Versão compatível com Render
+// SERVER.JS - Render Ready + Modal Histórico
 // ===========================================
-
 import express from "express";
 import cors from "cors";
 import path from "path";
@@ -12,7 +11,6 @@ const app = express();
 app.use(express.json());
 
 // ===== CORS =====
-// Libera acesso para localhost e Vercel
 app.use(cors({
   origin: [
     "http://localhost:3000",
@@ -21,19 +19,19 @@ app.use(cors({
   credentials: true
 }));
 
-// ===== Caminhos de diretório (para servir o front) =====
+// ===== Caminhos =====
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "../public")));
 
-// ====== Rotas principais ======
+// ====== Rotas ======
 
-// Teste inicial do servidor
+// Teste inicial
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
-// Criar usuário (login Google)
+// Usuário (login Google)
 app.post("/api/pacientes/usuario", async (req, res) => {
   const { nome, email } = req.body;
   try {
@@ -49,7 +47,7 @@ app.post("/api/pacientes/usuario", async (req, res) => {
   }
 });
 
-// Cadastrar paciente
+// Cadastro paciente
 app.post("/api/pacientes/cadastrar", async (req, res) => {
   const { nome, cpf, isHospital, setor, criado_por } = req.body;
   try {
@@ -100,15 +98,19 @@ app.post("/api/pacientes/saida", async (req, res) => {
   }
 });
 
-// Histórico de retiradas
+// Histórico com nome do responsável
 app.get("/api/pacientes/historico/:id", async (req, res) => {
   const id = req.params.id;
   try {
     const db = await openDb();
-    const historico = await db.all(
-      "SELECT medicamento, quantidade, tipo, data_entrega FROM saidas WHERE paciente_id = ? ORDER BY data_entrega DESC",
-      [id]
-    );
+    const historico = await db.all(`
+      SELECT s.medicamento, s.quantidade, s.tipo, s.data_entrega,
+             u.nome AS entregue_por_nome
+      FROM saidas s
+      LEFT JOIN usuarios u ON u.id = s.entregue_por
+      WHERE s.paciente_id = ?
+      ORDER BY s.data_entrega DESC
+    `, [id]);
     res.status(200).json(historico);
   } catch (err) {
     res.status(500).json({ erro: err.message });
@@ -122,6 +124,4 @@ app.post("/api/pacientes/logout", (req, res) => {
 
 // ===== Inicialização =====
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));

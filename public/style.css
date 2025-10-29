@@ -41,15 +41,88 @@ header button:hover {
 /* ===============================
    LOGIN
 =============================== */
+#loginSection {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: calc(100vh - 80px); /* ocupa toda a tela, menos o header */
+}
+
 .login-box {
+  background-color: #eaf2ff;
+  padding: 40px 60px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
   text-align: center;
-  margin-top: 100px;
 }
 
 .login-box h2 {
   color: #005cb2;
   font-weight: 600;
+  margin-bottom: 25px;
+  font-size: 1.5rem;
 }
+
+/* ===============================
+   TÍTULO E BARRA DE BUSCA
+=============================== */
+.consultas {
+  width: 90%;
+  margin: 30px auto;
+}
+
+.linha-titulo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.linha-titulo h2 {
+  color: #003f7f;
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.acoes-tabela {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.acoes-tabela input {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  min-width: 260px;
+  font-size: 0.95rem;
+  transition: 0.2s ease;
+}
+
+.acoes-tabela input:focus {
+  outline: none;
+  border-color: #005cb2;
+  box-shadow: 0 0 4px rgba(0, 92, 178, 0.3);
+}
+
+.acoes-tabela button {
+  background-color: #005cb2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.acoes-tabela button:hover {
+  background-color: #004999;
+  transform: scale(1.03);
+}
+
 
 /* ===============================
    PAINEL DE AÇÕES

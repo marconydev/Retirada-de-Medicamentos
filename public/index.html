@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Retirada de Medicamentos</title>
-  <link rel="stylesheet" href="style.css"/>
-  
+  <link rel="stylesheet" href="style.css" />
+
   <!-- SDK do Google para Login -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
+
 <body>
   <header>
     <h1>Retirada de Medicamentos - Farmácia HPZ</h1>
@@ -55,8 +57,13 @@
     <section class="consultas">
       <div class="linha-titulo">
         <h2>Pacientes Cadastrados</h2>
-        <button id="btnBuscar">Atualizar Lista</button>
+
+        <div class="acoes-tabela">
+          <input type="text" id="buscaPaciente" placeholder="Buscar paciente por nome ou CPF..." />
+          <button id="btnBuscar">Atualizar Lista</button>
+        </div>
       </div>
+
       <table id="tabelaPacientes">
         <thead>
           <tr>
@@ -153,4 +160,5 @@
   <!-- Script principal -->
   <script src="script.js"></script>
 </body>
+
 </html>

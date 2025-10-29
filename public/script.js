@@ -313,6 +313,19 @@ async function atualizarIndicadores(pacientes) {
   }
 }
 
+// Busca dinâmica de pacientes
+document.getElementById("buscaPaciente").addEventListener("input", (e) => {
+  const termo = e.target.value.toLowerCase();
+  const linhas = document.querySelectorAll("#tabelaPacientes tbody tr");
+  linhas.forEach((linha) => {
+    const nome = linha.children[0].textContent.toLowerCase();
+    const cpf = linha.children[1].textContent.toLowerCase();
+    linha.style.display =
+      nome.includes(termo) || cpf.includes(termo) ? "" : "none";
+  });
+});
+
+
 
 // ===================================================
 // TOAST

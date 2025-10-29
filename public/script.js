@@ -34,19 +34,35 @@ const tabelaPacientes = document.getElementById("tabelaPacientes").querySelector
 function handleCredentialResponse(response) {
   try {
     // Decodifica o token JWT retornado pelo Google
-    const base64Url = response.credential.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    const userData = JSON.parse(jsonPayload);
+    try {
+      const base64Url = response.credential.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = atob(base64);
+      const userData = JSON.parse(jsonPayload);
 
-    // Corrige nomes com acentuação
-    const nome = decodeURIComponent(escape(userData.name));
+      // Nome e e-mail direto do token, sem conversões extras
+      const nome = userData.name;
+      const email = userData.email;
 
+      fetch(`${API_URL}/usuario`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome, email })
+      })
+        .then(res => res.json())
+        .then(user => {
+          if (user.erro) throw new Error(user.erro);
+          localStorage.setItem("usuario", JSON.stringify(user));
+          carregarApp(user);
+        })
+        .catch(err => {
+          console.error("Erro no login:", err);
+          mostrarToast("Erro ao realizar login.", true);
+        });
+    } catch (error) {
+      console.error("Erro ao processar token Google:", error);
+      mostrarToast("Falha ao processar login do Google.", true);
+    }
     // Envia ao backend
     fetch(`${API_URL}/usuario`, {
       method: "POST",

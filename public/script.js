@@ -1,407 +1,269 @@
-// ===============================
-// CONFIGURAÇÕES INICIAIS
-// ===============================
-const API_URL = "/api/pacientes"; // URL base da API backend
-let usuarioId = null; // Armazena o ID do usuário logado
-let pacientesCache = []; // Cache com pacientes carregados (evita consultas repetidas)
+// ===============================================
+// SCRIPT PRINCIPAL - Retirada de Medicamentos
+// ===============================================
 
-// ===============================
-// FUNÇÕES AUXILIARES (CPF, FORMATAÇÃO, ETC.)
-// ===============================
+// URL base da API (relativa para funcionar local e no Render)
+const API_URL = "/api/pacientes";
 
-// Remove tudo que não for número
-const onlyDigits = s => (s || "").replace(/\D+/g, "");
+// Elementos do DOM
+const loginSection = document.getElementById("loginSection");
+const appSection = document.getElementById("appSection");
+const nomeUsuarioSpan = document.getElementById("nomeUsuario");
+const logoutBtn = document.getElementById("logoutBtn");
+const toast = document.getElementById("torrada");
 
-// Formata CPF para o padrão 000.000.000-00
-function formatCPF(cpfRaw) {
-  const c = onlyDigits(cpfRaw);
-  if (c.length !== 11) return cpfRaw || "";
-  return `${c.slice(0,3)}.${c.slice(3,6)}.${c.slice(6,9)}-${c.slice(9)}`;
-}
+// Modais
+const modalCadastro = document.getElementById("modalCadastro");
+const modalSaida = document.getElementById("modalSaida");
 
-// Valida CPF com base no cálculo oficial
-function validateCPF(cpfRaw) {
-  const cpf = onlyDigits(cpfRaw);
-  if (!cpf || cpf.length !== 11) return false;
-  if (/^(\d)\1{10}$/.test(cpf)) return false; // elimina CPFs com números repetidos
-  let sum = 0, rest;
-  for (let i = 1; i <= 9; i++) sum += parseInt(cpf.substring(i-1, i)) * (11 - i);
-  rest = (sum * 10) % 11; if (rest === 10 || rest === 11) rest = 0;
-  if (rest !== parseInt(cpf.substring(9, 10))) return false;
-  sum = 0;
-  for (let i = 1; i <= 10; i++) sum += parseInt(cpf.substring(i-1, i)) * (12 - i);
-  rest = (sum * 10) % 11; if (rest === 10 || rest === 11) rest = 0;
-  if (rest !== parseInt(cpf.substring(10, 11))) return false;
-  return true;
-}
+// Botões
+const abrirCadastroBtn = document.getElementById("abrirCadastroBtn");
+const abrirSaidaBtn = document.getElementById("abrirSaidaBtn");
+const fecharCadastro = document.getElementById("fecharCadastro");
+const fecharSaida = document.getElementById("fecharSaida");
 
-// ===============================
-// LOGIN GOOGLE E SESSÃO
-// ===============================
-window.addEventListener("load", async () => {
+// Campos
+const formCadastro = document.getElementById("formCadastroModal");
+const formSaida = document.getElementById("formSaida");
+const saidaPacienteSelect = document.getElementById("saidaPacienteSelect");
+const tabelaPacientes = document.getElementById("tabelaPacientes").querySelector("tbody");
+
+// ===================================================
+// LOGIN COM GOOGLE
+// ===================================================
+function handleCredentialResponse(response) {
   try {
-    // Tenta recuperar sessão existente
-    const res = await fetch(`${API_URL}/me`, { credentials: "include" });
-    if (res.ok) {
-      const user = await res.json();
-      usuarioId = user.id;
-
-      // Atualiza interface
-      document.getElementById("nomeUsuario").textContent = user.nome;
-      document.getElementById("loginSection").classList.add("hidden");
-      document.getElementById("appSection").classList.remove("hidden");
-      document.getElementById("logoutBtn").classList.remove("hidden");
-
-      // Carrega dados iniciais
-      await carregarPacientes(true);
-      await atualizarDashboard();
-    }
-  } catch {}
-
-  // Inicializa login do Google
-  google.accounts.id.initialize({
-    client_id: "888248677437-9blvld347207bc5tnnkse4c6n3r712b0.apps.googleusercontent.com",
-    callback: handleCredentialResponse,
-  });
-  google.accounts.id.renderButton(document.getElementById("googleLogin"), {
-    theme: "filled_blue",
-    size: "large",
-  });
-});
-
-// Decodifica o token JWT retornado pelo Google
-function parseJwt(token) {
-  if (!token) return {};
-  try {
-    const base64Url = token.split(".")[1];
+    // Decodifica o token JWT retornado pelo Google
+    const base64Url = response.credential.split(".")[1];
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const bin = atob(base64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const json = new TextDecoder("utf-8").decode(bytes);
-    return JSON.parse(json);
-  } catch { return {}; }
-}
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const userData = JSON.parse(jsonPayload);
 
-// Executado quando o login do Google é bem-sucedido
-async function handleCredentialResponse(response) {
-  try {
-    const data = parseJwt(response.credential);
-    const nomeCorrigido = (data.name || "Usuário Google").normalize("NFC");
+    // Corrige nomes com acentuação
+    const nome = decodeURIComponent(escape(userData.name));
 
-    // Envia dados para backend registrar usuário (ou recuperar existente)
-    const res = await fetch(`${API_URL}/usuario`, {
+    // Envia ao backend
+    fetch(`${API_URL}/usuario`, {
       method: "POST",
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-      credentials: "include",
-      body: JSON.stringify({ nome: nomeCorrigido, email: data.email }),
-    });
-
-    if (!res.ok) throw new Error("Falha ao registrar usuário.");
-    const user = await res.json();
-
-    usuarioId = user.id;
-    document.getElementById("nomeUsuario").textContent = user.nome;
-    document.getElementById("loginSection").classList.add("hidden");
-    document.getElementById("appSection").classList.remove("hidden");
-    document.getElementById("logoutBtn").classList.remove("hidden");
-    showToast(`Bem-vindo, ${user.nome}`);
-
-    await carregarPacientes(true);
-    await atualizarDashboard();
-  } catch {
-    showToast("Falha no login. Tente novamente.", true);
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nome, email: userData.email })
+    })
+      .then(res => res.json())
+      .then(user => {
+        if (user.erro) throw new Error(user.erro);
+        localStorage.setItem("usuario", JSON.stringify(user));
+        carregarApp(user);
+      })
+      .catch(err => {
+        console.error("Erro no login:", err);
+        mostrarToast("Erro ao realizar login.", true);
+      });
+  } catch (error) {
+    console.error("Erro ao processar token Google:", error);
+    mostrarToast("Falha no login Google.", true);
   }
 }
 
-// Logout (encerra sessão)
-document.getElementById("logoutBtn").addEventListener("click", async () => {
-  try { await fetch(`${API_URL}/logout`, { method: "POST", credentials: "include" }); } catch {}
-  usuarioId = null;
-  document.getElementById("appSection").classList.add("hidden");
-  document.getElementById("loginSection").classList.remove("hidden");
-  showToast("Sessão encerrada.");
-});
-
-// ===============================
-// FUNÇÃO DE MENSAGEM POPUP (TOAST)
-// ===============================
-function showToast(msg, isError = false) {
-  const el = document.getElementById("toast");
-  el.textContent = msg;
-  el.style.background = isError ? "#dc3545" : "#007bff"; // vermelho p/ erro, azul p/ sucesso
-  el.classList.add("show");
-  setTimeout(() => el.classList.remove("show"), 2800);
-}
-
-// ===============================
-// CONTROLE DE MODAIS (ABRIR/FECHAR)
-// ===============================
-function abrirSomente(id) {
-  ["modalCadastro", "modalSaida", "modalHistorico"].forEach(mid => {
-    const el = document.getElementById(mid);
-    if (mid === id) el.classList.remove("hidden");
-    else el.classList.add("hidden");
+// Inicializa o botão do Google
+window.onload = () => {
+  google.accounts.id.initialize({
+    client_id: "888248677437-9blvld347207bc5tnnkse4c6n3r712b0.apps.googleusercontent.com",
+    callback: handleCredentialResponse
   });
+  google.accounts.id.renderButton(document.getElementById("googleLogin"), {
+    theme: "outline",
+    size: "large"
+  });
+
+  // Se já estiver logado, carrega direto
+  const user = JSON.parse(localStorage.getItem("usuario"));
+  if (user) carregarApp(user);
+};
+
+// ===================================================
+// CARREGAMENTO DO APLICATIVO (PÓS LOGIN)
+// ===================================================
+function carregarApp(user) {
+  loginSection.classList.add("hidden");
+  appSection.classList.remove("hidden");
+  logoutBtn.classList.remove("hidden");
+  nomeUsuarioSpan.textContent = user.nome;
+
+  atualizarTabela();
+  carregarPacientesSelect();
 }
-function fecharTodosModais() { abrirSomente("__none__"); }
 
-// Botões que abrem os modais
-document.getElementById("abrirCadastroBtn").addEventListener("click", () => {
-  document.getElementById("formCadastroModal").reset();
-  document.getElementById("cadSetor").disabled = true;
-  abrirSomente("modalCadastro");
-});
-document.getElementById("abrirSaidaBtn").addEventListener("click", async () => {
-  if (!pacientesCache.length) await carregarPacientes(true);
-  prepararAutocompletePacientes();
-  document.getElementById("formSaida").reset();
-  abrirSomente("modalSaida");
-});
+// Logout
+logoutBtn.onclick = () => {
+  localStorage.removeItem("usuario");
+  fetch(`${API_URL}/logout`, { method: "POST" });
+  appSection.classList.add("hidden");
+  loginSection.classList.remove("hidden");
+  logoutBtn.classList.add("hidden");
+  mostrarToast("Sessão encerrada.");
+};
 
-// ===============================
-// CADASTRO DE PACIENTES
-// ===============================
-const cadFlag = document.getElementById("cadHospital");
-const cadSetor = document.getElementById("cadSetor");
+// ===================================================
+// MODAIS (abrir / fechar)
+// ===================================================
+abrirCadastroBtn.onclick = () => {
+  modalCadastro.classList.remove("hidden");
+};
+abrirSaidaBtn.onclick = () => {
+  modalSaida.classList.remove("hidden");
+  carregarPacientesSelect();
+};
+fecharCadastro.onclick = () => modalCadastro.classList.add("hidden");
+fecharSaida.onclick = () => modalSaida.classList.add("hidden");
 
-// Habilita campo "setor" apenas se a flag for marcada
-cadFlag.addEventListener("change", () => {
-  cadSetor.disabled = !cadFlag.checked;
-  if (!cadFlag.checked) cadSetor.value = "";
-});
-
-// Formata CPF enquanto o usuário digita
-const cadCpf = document.getElementById("cadCpf");
-cadCpf.addEventListener("input", () => {
-  const digits = onlyDigits(cadCpf.value).slice(0,11);
-  let fmt = digits;
-  if (digits.length > 9) fmt = `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`;
-  else if (digits.length > 6) fmt = `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6)}`;
-  else if (digits.length > 3) fmt = `${digits.slice(0,3)}.${digits.slice(3)}`;
-  cadCpf.value = fmt;
-});
-
-// Submissão do cadastro
-document.getElementById("formCadastroModal").addEventListener("submit", async (e) => {
+// ===================================================
+// CADASTRAR PACIENTE
+// ===================================================
+formCadastro.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  const user = JSON.parse(localStorage.getItem("usuario"));
   const nome = document.getElementById("cadNome").value.trim();
-  const cpfFmt = document.getElementById("cadCpf").value.trim();
-  const cpfDigits = onlyDigits(cpfFmt);
+  const cpf = document.getElementById("cadCpf").value.replace(/\D/g, "");
   const isHospital = document.getElementById("cadHospital").checked;
   const setor = document.getElementById("cadSetor").value.trim();
 
-  // Validações básicas
-  if (!nome || !cpfDigits || (isHospital && !setor)) {
-    showToast("Preencha os campos obrigatórios.", true);
-    return;
+  if (!nome || !cpf || (isHospital && !setor)) {
+    return mostrarToast("Preencha todos os campos obrigatórios.", true);
   }
-  if (!validateCPF(cpfDigits)) return showToast("CPF inválido.", true);
 
-  // Envia dados para API
+  const dados = { nome, cpf, isHospital, setor, criado_por: user.id };
+
   try {
     const res = await fetch(`${API_URL}/cadastrar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ nome, cpf: cpfDigits, isHospital, setor, criado_por: usuarioId }),
+      body: JSON.stringify(dados)
     });
     const data = await res.json();
-    if (res.ok) {
-      showToast(data.sucesso);
-      fecharTodosModais();
-      await carregarPacientes(true);
-      await atualizarDashboard();
-    } else showToast(data.erro || "Erro ao cadastrar.", true);
-  } catch {
-    showToast("Erro de conexão.", true);
+
+    if (data.erro) throw new Error(data.erro);
+    mostrarToast("Paciente cadastrado com sucesso!");
+    modalCadastro.classList.add("hidden");
+    atualizarTabela();
+  } catch (err) {
+    mostrarToast(err.message, true);
   }
 });
 
-// ===============================
-// AUTOCOMPLETE (PACIENTES NO MODAL DE SAÍDA)
-// ===============================
-function prepararAutocompletePacientes() {
-  const inp = document.getElementById("saidaPacienteInput");
-  const hid = document.getElementById("saidaPacienteId");
-  const sug = document.getElementById("pacienteSuggestions");
-
-  // Filtra pacientes conforme digita
-  inp.addEventListener("input", () => {
-    const termo = inp.value.toLowerCase();
-    if (!termo) return (sug.innerHTML = "", sug.classList.add("hidden"));
-    const filtrados = pacientesCache.filter(p =>
-      p.nome.toLowerCase().includes(termo) || formatCPF(p.cpf).includes(termo)
-    );
-    // Monta lista suspensa
-    sug.innerHTML = filtrados.map(p =>
-      `<div class="item" data-id="${p.id}" data-label="${p.nome}">${p.nome} — ${formatCPF(p.cpf)}</div>`
-    ).join("");
-    sug.classList.remove("hidden");
-  });
-
-  // Ao clicar em um item, preenche campo
-  sug.addEventListener("click", e => {
-    const item = e.target.closest(".item");
-    if (!item) return;
-    hid.value = item.dataset.id;
-    inp.value = item.dataset.label;
-    sug.classList.add("hidden");
-  });
-
-  // Fecha a lista se clicar fora
-  document.addEventListener("click", e => {
-    if (!sug.contains(e.target) && e.target !== inp) sug.classList.add("hidden");
-  });
-}
-
-// ===============================
+// ===================================================
 // REGISTRAR SAÍDA DE MEDICAMENTO
-// ===============================
-document.getElementById("formSaida").addEventListener("submit", async e => {
+// ===================================================
+formSaida.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const paciente_id = document.getElementById("saidaPacienteId").value;
+
+  const user = JSON.parse(localStorage.getItem("usuario"));
+  const paciente_id = saidaPacienteSelect.value;
   const medicamento = document.getElementById("saidaMedicamento").value.trim();
-  const quantidade = document.getElementById("saidaQuantidade").value.trim();
+  const quantidade = document.getElementById("saidaQuantidade").value;
   const tipo = document.getElementById("saidaTipo").value.trim();
 
-  if (!paciente_id || !medicamento || !quantidade || !tipo)
-    return showToast("Preencha todos os campos.", true);
+  if (!paciente_id || !medicamento || !quantidade || !tipo) {
+    return mostrarToast("Preencha todos os campos obrigatórios.", true);
+  }
+
+  const dados = { paciente_id, medicamento, quantidade, tipo, entregue_por: user.id };
 
   try {
     const res = await fetch(`${API_URL}/saida`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ paciente_id, medicamento, quantidade, tipo, entregue_por: usuarioId }),
+      body: JSON.stringify(dados)
     });
     const data = await res.json();
-    if (res.ok) {
-      showToast(data.sucesso);
-      fecharTodosModais();
-      await carregarPacientes(true);
-      await atualizarDashboard();
-    } else showToast(data.erro || "Erro.", true);
-  } catch {
-    showToast("Erro de conexão.", true);
+
+    if (data.erro) throw new Error(data.erro);
+    mostrarToast("Saída registrada com sucesso!");
+    modalSaida.classList.add("hidden");
+    atualizarTabela();
+  } catch (err) {
+    mostrarToast(err.message, true);
   }
 });
 
-// ===============================
-// CARREGAR PACIENTES (AGRUPADOS)
-// ===============================
-async function carregarPacientes(updateCache = false) {
+// ===================================================
+// CONSULTAS E ATUALIZAÇÕES
+// ===================================================
+async function atualizarTabela() {
   try {
-    const res = await fetch(`${API_URL}/consultar`, { credentials: "include" });
-    const data = await res.json();
-    const tbody = document.querySelector("#tabelaPacientes tbody");
-    tbody.innerHTML = "";
+    const res = await fetch(`${API_URL}/consultar`);
+    const pacientes = await res.json();
 
-    if (updateCache) pacientesCache = data;
-
-    // Cria uma linha por paciente
-    data.forEach(p => {
+    tabelaPacientes.innerHTML = "";
+    pacientes.forEach(p => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="paciente-nome" data-id="${p.id}">${p.nome}</td>
-        <td>${formatCPF(p.cpf)}</td>
+        <td>${p.nome}</td>
+        <td>${p.cpf}</td>
         <td>${p.setor || "-"}</td>
-        <td>${p.total_retiradas}</td>
+        <td>${p.total_retiradas || 0}</td>
       `;
-      tbody.appendChild(tr);
+      tr.onclick = () => carregarHistorico(p.id, p.nome);
+      tabelaPacientes.appendChild(tr);
     });
-
-    aplicarFiltroTabela();
-
-    // Ao clicar no nome → abrir histórico
-    document.querySelectorAll(".paciente-nome").forEach(td => {
-      td.addEventListener("click", async () => {
-        const pid = td.dataset.id;
-        const nome = td.textContent;
-        await abrirHistorico(pid, nome);
-      });
-    });
-
-  } catch {
-    showToast("Erro ao carregar pacientes.", true);
+  } catch (error) {
+    console.error("Erro ao carregar tabela:", error);
+    mostrarToast("Falha ao carregar pacientes.", true);
   }
 }
 
-// ===============================
-// HISTÓRICO DE RETIRADAS POR PACIENTE
-// ===============================
-async function abrirHistorico(id, nome) {
-  const modal = document.getElementById("modalHistorico");
-  const div = document.getElementById("historicoConteudo");
-  div.innerHTML = `<p>Carregando histórico...</p>`;
-  modal.classList.remove("hidden");
-
+// Preenche o select de pacientes no modal de saída
+async function carregarPacientesSelect() {
   try {
-    const res = await fetch(`${API_URL}/historico/${id}`, { credentials: "include" });
-    const data = await res.json();
-    if (!data.length) {
-      div.innerHTML = `<p>Sem retiradas registradas para ${nome}.</p>`;
-      return;
+    const res = await fetch(`${API_URL}/consultar`);
+    const pacientes = await res.json();
+
+    saidaPacienteSelect.innerHTML = "<option value=''>Selecione um paciente</option>";
+    pacientes.forEach(p => {
+      const option = document.createElement("option");
+      option.value = p.id;
+      option.textContent = p.nome;
+      saidaPacienteSelect.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Erro ao carregar lista de pacientes:", error);
+  }
+}
+
+// Carrega histórico individual (ao clicar no nome)
+async function carregarHistorico(id, nome) {
+  try {
+    const res = await fetch(`${API_URL}/historico/${id}`);
+    const historico = await res.json();
+
+    if (!historico.length) {
+      return mostrarToast(`Nenhuma retirada encontrada para ${nome}.`);
     }
 
-    // Monta tabela de retiradas
-    let html = `<h4>${nome}</h4><table class="tabela-historico">
-      <thead><tr><th>Medicamento</th><th>Qtd</th><th>Tipo</th><th>Data</th><th>Entregue por</th></tr></thead><tbody>`;
-    data.forEach(r => {
-      html += `<tr>
-        <td>${r.medicamento}</td>
-        <td>${r.quantidade}</td>
-        <td>${r.tipo}</td>
-        <td>${r.data_entrega}</td>
-        <td>${r.entregue_por || "-"}</td>
-      </tr>`;
-    });
-    html += "</tbody></table>";
-    div.innerHTML = html;
-  } catch {
-    div.innerHTML = `<p>Erro ao carregar histórico.</p>`;
+    const detalhes = historico
+      .map(h => `${h.medicamento} - ${h.quantidade} ${h.tipo} (${h.data_entrega.split(" ")[0]})`)
+      .join("\n");
+
+    alert(`Histórico de ${nome}:\n\n${detalhes}`);
+  } catch (err) {
+    mostrarToast("Erro ao carregar histórico.", true);
   }
 }
 
-// Botão "fechar" do modal de histórico
-document.getElementById("fecharHistorico").addEventListener("click", () => {
-  document.getElementById("modalHistorico").classList.add("hidden");
-});
+// ===================================================
+// TOAST DE FEEDBACK
+// ===================================================
+function mostrarToast(msg, erro = false) {
+  toast.textContent = msg;
+  toast.className = erro ? "erro" : "sucesso";
+  toast.classList.remove("hidden");
 
-// ===============================
-// FILTRO E DASHBOARD
-// ===============================
-document.getElementById("btnBuscar").addEventListener("click", () => carregarPacientes(true));
-const filtroInput = document.getElementById("filtroTabela");
-filtroInput.addEventListener("input", aplicarFiltroTabela);
-
-// Filtra pacientes na tabela
-function aplicarFiltroTabela() {
-  const term = filtroInput.value.trim().toLowerCase();
-  document.querySelectorAll("#tabelaPacientes tbody tr").forEach(row => {
-    const nome = row.children[0].textContent.toLowerCase();
-    const cpf = row.children[1].textContent.toLowerCase();
-    row.style.display = !term || nome.includes(term) || cpf.includes(term) ? "" : "none";
-  });
+  setTimeout(() => {
+    toast.classList.add("hidden");
+  }, 4000);
 }
-
-// Atualiza contadores do painel (total de pacientes e saídas)
-async function atualizarDashboard() {
-  try {
-    const res = await fetch(`${API_URL}/consultar`, { credentials: "include" });
-    const data = await res.json();
-    const pacientesUnicos = new Set(data.map(p => p.id)).size;
-    const totalSaidas = data.reduce((acc, p) => acc + p.total_retiradas, 0);
-    document.getElementById("totalPacientes").textContent = pacientesUnicos;
-    document.getElementById("totalSaidas").textContent = totalSaidas;
-  } catch {}
-}
-
-// ===============================
-// FECHAR MODAIS CLICANDO FORA
-// ===============================
-document.querySelectorAll(".modal").forEach(m => {
-  m.addEventListener("click", e => { if (e.target === m) fecharTodosModais(); });
-});
-document.getElementById("fecharCadastro").addEventListener("click", fecharTodosModais);
-document.getElementById("fecharSaida").addEventListener("click", fecharTodosModais);

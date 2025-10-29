@@ -1,127 +1,125 @@
-// ===========================================
-// SERVER.JS - Render Ready + Modal Histórico
-// ===========================================
+// ==============================================
+// SERVER.JS - BACKEND COMPLETO E CORRIGIDO
+// ==============================================
+
 import express from "express";
 import cors from "cors";
+import { openDb } from "./db.js";
 import path from "path";
 import { fileURLToPath } from "url";
-import { openDb } from "./db.js";
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
-// ===== CORS =====
-app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://retirada.vercel.app"
-  ],
-  credentials: true
-}));
-
-// ===== Caminhos =====
+// Diretórios para rodar no Render e local
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ==============================================
+// SERVE OS ARQUIVOS DO FRONTEND
+// ==============================================
 app.use(express.static(path.join(__dirname, "../public")));
 
-// ====== Rotas ======
-
-// Teste inicial
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/index.html"));
+// ==============================================
+// ROTAS DE TESTE / STATUS
+// ==============================================
+app.get("/api/teste", (req, res) => {
+  res.json({ ok: true, msg: "API funcionando corretamente ✅" });
 });
 
-// Usuário (login Google)
-app.post("/api/pacientes/usuario", async (req, res) => {
-  const { nome, email } = req.body;
-  try {
-    const db = await openDb();
-    let usuario = await db.get("SELECT * FROM usuarios WHERE email = ?", [email]);
-    if (!usuario) {
-      await db.run("INSERT INTO usuarios (nome, email) VALUES (?, ?)", [nome, email]);
-      usuario = await db.get("SELECT * FROM usuarios WHERE email = ?", [email]);
-    }
-    res.status(200).json(usuario);
-  } catch (err) {
-    res.status(500).json({ erro: err.message });
-  }
-});
+// ==============================================
+// ROTAS DE PACIENTES E SAÍDAS
+// ==============================================
 
-// Cadastro paciente
-app.post("/api/pacientes/cadastrar", async (req, res) => {
-  const { nome, cpf, isHospital, setor, criado_por } = req.body;
-  try {
-    const db = await openDb();
-    const jaExiste = await db.get("SELECT * FROM pacientes WHERE cpf = ?", [cpf]);
-    if (jaExiste) {
-      return res.status(400).json({ erro: "Paciente já cadastrado com este CPF." });
-    }
-    await db.run(
-      "INSERT INTO pacientes (nome, cpf, isHospital, setor, criado_por) VALUES (?, ?, ?, ?, ?)",
-      [nome, cpf, isHospital ? 1 : 0, setor, criado_por]
-    );
-    res.status(200).json({ sucesso: true });
-  } catch (err) {
-    res.status(500).json({ erro: err.message });
-  }
-});
-
-// Consultar pacientes
-app.get("/api/pacientes/consultar", async (req, res) => {
+// CONSULTAR TODOS OS PACIENTES + TOTAL DE RETIRADAS
+app.get("/consultar", async (req, res) => {
   try {
     const db = await openDb();
     const pacientes = await db.all(`
       SELECT p.*, COUNT(s.id) AS total_retiradas
       FROM pacientes p
-      LEFT JOIN saidas s ON s.paciente_id = p.id
+      LEFT JOIN saidas s ON p.id = s.paciente_id
       GROUP BY p.id
       ORDER BY p.nome ASC
     `);
-    res.status(200).json(pacientes);
-  } catch (err) {
-    res.status(500).json({ erro: err.message });
+    res.json(pacientes);
+  } catch (error) {
+    console.error("Erro ao consultar pacientes:", error);
+    res.status(500).send("Erro ao consultar pacientes.");
   }
 });
 
-// Registrar saída
-app.post("/api/pacientes/saida", async (req, res) => {
-  const { paciente_id, medicamento, quantidade, tipo, entregue_por } = req.body;
+// CADASTRAR PACIENTE
+app.post("/cadastrar", async (req, res) => {
   try {
+    const { nome, cpf, isHospital, setor, criado_por } = req.body;
     const db = await openDb();
+
+    // Validação de CPF duplicado
+    const existente = await db.get("SELECT * FROM pacientes WHERE cpf = ?", [cpf]);
+    if (existente) {
+      return res.status(400).send("Paciente já cadastrado.");
+    }
+
+    await db.run(
+      "INSERT INTO pacientes (nome, cpf, isHospital, setor, criado_por) VALUES (?, ?, ?, ?, ?)",
+      [nome, cpf, isHospital ? 1 : 0, setor || null, criado_por || null]
+    );
+
+    res.status(200).send("Paciente cadastrado com sucesso!");
+  } catch (error) {
+    console.error("Erro ao cadastrar paciente:", error);
+    res.status(500).send("Erro ao cadastrar paciente.");
+  }
+});
+
+// REGISTRAR SAÍDA DE MEDICAMENTO
+app.post("/saida", async (req, res) => {
+  try {
+    const { paciente_id, medicamento, quantidade, tipo, entregue_por } = req.body;
+    const db = await openDb();
+
     await db.run(
       "INSERT INTO saidas (paciente_id, medicamento, quantidade, tipo, entregue_por) VALUES (?, ?, ?, ?, ?)",
       [paciente_id, medicamento, quantidade, tipo, entregue_por]
     );
-    res.status(200).json({ sucesso: true });
-  } catch (err) {
-    res.status(500).json({ erro: err.message });
+
+    res.status(200).send("Saída registrada com sucesso!");
+  } catch (error) {
+    console.error("Erro ao registrar saída:", error);
+    res.status(500).send("Erro ao registrar saída.");
   }
 });
 
-// Histórico com nome do responsável
-app.get("/api/pacientes/historico/:id", async (req, res) => {
-  const id = req.params.id;
+// HISTÓRICO DE RETIRADAS POR PACIENTE
+app.get("/historico/:id", async (req, res) => {
   try {
+    const { id } = req.params;
     const db = await openDb();
-    const historico = await db.all(`
-      SELECT s.medicamento, s.quantidade, s.tipo, s.data_entrega,
-             u.nome AS entregue_por_nome
-      FROM saidas s
-      LEFT JOIN usuarios u ON u.id = s.entregue_por
-      WHERE s.paciente_id = ?
-      ORDER BY s.data_entrega DESC
-    `, [id]);
-    res.status(200).json(historico);
-  } catch (err) {
-    res.status(500).json({ erro: err.message });
+    const historico = await db.all(
+      "SELECT * FROM saidas WHERE paciente_id = ? ORDER BY data_entrega DESC",
+      [id]
+    );
+    res.json(historico);
+  } catch (error) {
+    console.error("Erro ao carregar histórico:", error);
+    res.status(500).send("Erro ao carregar histórico.");
   }
 });
 
-// Logout
-app.post("/api/pacientes/logout", (req, res) => {
-  res.status(200).json({ sucesso: true });
+// ==============================================
+// ROTA FINAL (SPA FALLBACK)
+// ==============================================
+// Se nenhuma rota acima for atendida, envia o index.html do front
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
-// ===== Inicialização =====
+// ==============================================
+// INICIALIZA O SERVIDOR
+// ==============================================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+});

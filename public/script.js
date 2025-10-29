@@ -7,23 +7,41 @@ let usuarioLogado = null;
 /* ============================================================
    LOGIN COM GOOGLE
 ============================================================ */
+/* ============================================================
+   LOGIN COM GOOGLE - VERSÃO ESTÁVEL
+============================================================ */
 window.onload = () => {
-  // Inicializa o login Google
-  google.accounts.id.initialize({
-    client_id: "888248677437-9blvld347207bc5tnnkse4c6n3r712b0.apps.googleusercontent.com",
-    callback: handleCredentialResponse,
-  });
-
-  // Renderiza o botão de login
+  const clientId = "888248677437-9blvld347207bc5tnnkse4c6n3r712b0.apps.googleusercontent.com";
   const divLogin = document.getElementById("googleLogin");
-  if (divLogin) {
-    google.accounts.id.renderButton(divLogin, {
-      theme: "filled_blue",
-      size: "large",
-      text: "signin_with",
-      shape: "rectangular",
-    });
+
+  let tentativas = 0;
+  const maxTentativas = 15; // ~4.5 segundos no total
+
+  function inicializarGoogle() {
+    if (window.google && window.google.accounts && window.google.accounts.id && divLogin) {
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleCredentialResponse,
+      });
+
+      google.accounts.id.renderButton(divLogin, {
+        theme: "filled_blue",
+        size: "large",
+        text: "signin_with",
+        shape: "rectangular",
+      });
+
+      console.log("✅ Login Google inicializado com sucesso");
+    } else if (tentativas < maxTentativas) {
+      tentativas++;
+      console.log("⏳ Aguardando SDK do Google carregar...");
+      setTimeout(inicializarGoogle, 300);
+    } else {
+      console.error("❌ Falha ao inicializar o login do Google.");
+    }
   }
+
+  inicializarGoogle();
 };
 
 /**

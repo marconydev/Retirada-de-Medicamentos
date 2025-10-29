@@ -1,7 +1,7 @@
 // ===============================
 // CONFIGURAÇÕES INICIAIS
 // ===============================
-const API_URL = "http://localhost:3000/api/pacientes"; // URL base da API backend
+const API_URL = "/api/pacientes"; // URL base da API backend
 let usuarioId = null; // Armazena o ID do usuário logado
 let pacientesCache = []; // Cache com pacientes carregados (evita consultas repetidas)
 

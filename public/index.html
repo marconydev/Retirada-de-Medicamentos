@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retirada de Medicamentos</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+  <header>
+    <h1>Retirada de Medicamentos - Farmácia HPZ</h1>
+    <button id="logoutBtn" class="hidden">Sair</button>
+  </header>
+
+  <!-- TELA DE LOGIN -->
+  <main id="loginSection">
+    <div class="login-box">
+      <h2>Entrar com o Google</h2>
+      <div id="googleLogin"></div>
+    </div>
+  </main>
+
+  <!-- APP (pós-login) -->
+  <main id="appSection" class="hidden">
+    <section class="painel-acoes">
+      <h2>Bem-vindo, <span id="nomeUsuario"></span></h2>
+      <p>Escolha uma ação:</p>
+      <div class="botoes-acoes">
+        <button id="abrirCadastroBtn">Cadastrar Paciente</button>
+        <button id="abrirSaidaBtn">Registrar Saída de Medicamento</button>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <section class="dashboard">
+      <div class="card">
+        <h3>Total de Pacientes</h3>
+        <p id="totalPacientes">0</p>
+      </div>
+      <div class="card">
+        <h3>Total de Saídas</h3>
+        <p id="totalSaidas">0</p>
+      </div>
+    </section>
+
+    <!-- Tabela e Busca -->
+    <section class="consultas">
+      <div class="linha-titulo">
+        <h2>Pacientes Cadastrados</h2>
+        <div class="linha-filtros">
+          <input id="filtroTabela" type="text" placeholder="Buscar por nome ou CPF..." />
+          <button id="btnBuscar">Atualizar Lista</button>
+        </div>
+      </div>
+      <table id="tabelaPacientes">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Setor</th>
+            <th>Última Medicação</th>
+            <th>Quantidade</th>
+            <th>Data</th>
+            <th>Liberado por</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- MODAL: Cadastrar Paciente -->
+  <div id="modalCadastro" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <button class="modal-close" id="fecharCadastro" aria-label="Fechar">×</button>
+      <h3>Cadastrar Paciente</h3>
+      <form id="formCadastroModal">
+        <label>Nome completo</label>
+        <input type="text" id="cadNome" placeholder="Ex.: João da Silva" required />
+
+        <label>CPF</label>
+        <input type="text" id="cadCpf" inputmode="numeric" placeholder="000.000.000-00" maxlength="14" required />
+
+        <label class="inline">
+          É do Hospital?
+          <input type="checkbox" id="cadHospital" />
+        </label>
+
+        <label>Setor</label>
+        <input type="text" id="cadSetor" placeholder="Ex.: Enfermagem" disabled />
+
+        <button type="submit" class="primario">Salvar Cadastro</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Saída de Medicamento -->
+  <div id="modalSaida" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <button class="modal-close" id="fecharSaida" aria-label="Fechar">×</button>
+      <h3>Registrar Saída</h3>
+
+      <form id="formSaida">
+        <label>Paciente (digite nome ou CPF)</label>
+        <div class="combo">
+          <input type="text" id="saidaPacienteInput" placeholder="Ex.: João / 123.456.789-00" autocomplete="off" />
+          <input type="hidden" id="saidaPacienteId" />
+          <div id="pacienteSuggestions" class="suggestions hidden"></div>
+        </div>
+
+        <label>Medicamento</label>
+        <input type="text" id="saidaMedicamento" placeholder="Ex.: Amoxicilina" required />
+
+        <label>Quantidade</label>
+        <input type="number" id="saidaQuantidade" placeholder="Ex.: 10" required />
+
+        <label>Forma (comprimido, líquido, ampola...)</label>
+        <input type="text" id="saidaTipo" placeholder="Ex.: comprimido" required />
+
+        <button type="submit" class="primario">Registrar Saída</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden"></div>
+
+  <!-- MODAL: Histórico de Retiradas -->
+  <div id="modalHistorico" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <button class="modal-close" id="fecharHistorico" aria-label="Fechar">×</button>
+      <h3>Histórico de Retiradas</h3>
+      <div id="historicoConteudo">
+        <p class="muted">Selecione um paciente para ver as retiradas...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

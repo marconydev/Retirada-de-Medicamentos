@@ -1,0 +1,29 @@
+{
+  "name": "retirada-de-medicamentos",
+  "version": "1.0.0",
+  "description": "Sistema web para controle de retirada de medicamentos em farmácia hospitalar.",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js"
+  },
+  "keywords": [
+    "farmacia",
+    "hospital",
+    "nodejs",
+    "sqlite",
+    "controle",
+    "retirada"
+  ],
+  "author": "Marcony Júnior",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "sqlite3": "^5.1.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Retirada de Medicamentos</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css"/>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-
 <body>
   <header>
     <h1>Retirada de Medicamentos - Farmácia HPZ</h1>
@@ -23,7 +21,7 @@
     </div>
   </main>
 
-  <!-- APP (pós-login) -->
+  <!-- APLICAÇÃO PRINCIPAL -->
   <main id="appSection" class="hidden">
     <section class="painel-acoes">
       <h2>Bem-vindo, <span id="nomeUsuario"></span></h2>
@@ -31,6 +29,18 @@
       <div class="botoes-acoes">
         <button id="abrirCadastroBtn">Cadastro de Pacientes</button>
         <button id="abrirSaidaBtn">Registrar Saída de Medicamento</button>
+      </div>
+    </section>
+
+    <!-- Indicadores -->
+    <section class="painel-indicadores">
+      <div class="card">
+        <h3>Total de Pacientes</h3>
+        <p id="totalPacientes">0</p>
+      </div>
+      <div class="card">
+        <h3>Total de Saídas</h3>
+        <p id="totalSaidas">0</p>
       </div>
     </section>
 
@@ -67,7 +77,8 @@
         <input type="text" id="cadCpf" placeholder="Ex.: 000.000.000-00" required />
 
         <label class="inline">
-          <input type="checkbox" id="cadHospital" /> É do Hospital?
+           É do Hospital?
+           <input type="checkbox" id="cadHospital" />
         </label>
 
         <label>Setor</label>
@@ -102,17 +113,7 @@
       </form>
     </div>
   </div>
-  <!-- Painel de Indicadores -->
-  <section class="painel-indicadores">
-    <div class="card">
-      <h3>Total de Pacientes</h3>
-      <p id="totalPacientes">0</p>
-    </div>
-    <div class="card">
-      <h3>Total de Saídas</h3>
-      <p id="totalSaidas">0</p>
-    </div>
-  </section>
+
   <!-- MODAL: Histórico de Retiradas -->
   <div id="modalHistorico" class="modal hidden" aria-hidden="true">
     <div class="modal-content">
@@ -139,5 +140,4 @@
 
   <script src="script.js"></script>
 </body>
-
 </html>

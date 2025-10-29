@@ -64,6 +64,11 @@ header button:hover {
   color: #003f7f;
 }
 
+.painel-acoes p {
+  margin-top: 10px;
+  color: #333;
+}
+
 .botoes-acoes {
   display: flex;
   justify-content: center;
@@ -87,6 +92,38 @@ header button:hover {
 .botoes-acoes button:hover {
   background-color: #004999;
   transform: scale(1.03);
+}
+
+/* ===============================
+   PAINEL DE INDICADORES
+=============================== */
+.painel-indicadores {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 30px auto;
+}
+
+.card {
+  background-color: #eaf2ff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+  width: 220px;
+  text-align: center;
+}
+
+.card h3 {
+  color: #005cb2;
+  font-size: 1.1rem;
+}
+
+.card p {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #003f7f;
+  margin: 5px 0 0;
 }
 
 /* ===============================
@@ -169,7 +206,7 @@ td.link {
   color: #003f7f;
   font-size: 24px;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, color 0.2s ease;
 }
 
 .modal-close:hover {
@@ -268,43 +305,6 @@ button.primario:hover {
 #torrada.erro {
   background-color: #c62828;
 }
-
-.hidden {
-  display: none;
-}
-
-/* ===============================
-   PAINEL DE INDICADORES
-=============================== */
-.painel-indicadores {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin: 30px auto;
-}
-
-.card {
-  background-color: #eaf2ff;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
-  width: 220px;
-  text-align: center;
-}
-
-.card h3 {
-  color: #005cb2;
-  font-size: 1.1rem;
-}
-
-.card p {
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: #003f7f;
-  margin: 5px 0 0;
-}
-
 
 /* ===============================
    ANIMAÇÕES
